@@ -23,37 +23,43 @@ export default function Home() {
   const [prompts, setPrompts] = useState<Prompt[]>([]);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    async function fetchPrompts() {
-      setLoading(true);
-      try {
-        // Fetch data from Supabase
-        const { data, error } = await supabase
-          .from('prompts')
-          .select('*')
-          .order('created_at', { ascending: false });
+  const fetchPrompts = async () => {
+    // Don't set loading to true here to avoid flash, or handle it gracefully
+    // setLoading(true); 
+    try {
+      // Fetch data from Supabase
+      const { data, error } = await supabase
+        .from('prompts')
+        .select('*')
+        .order('created_at', { ascending: false });
 
-        if (error) {
-          console.error('Error fetching prompts:', error);
-        }
-
-        if (data && data.length > 0) {
-          // Cast the data to our Prompt type (Supabase types might need generation, but this works for now)
-          setPrompts(data as any as Prompt[]);
-        } else {
-          // If no data in DB, use Mock data
-          setPrompts(MOCK_PROMPTS);
-        }
-      } catch (err) {
-        console.error('Unexpected error:', err);
-        setPrompts(MOCK_PROMPTS);
-      } finally {
-        setLoading(false);
+      if (error) {
+        console.error('Error fetching prompts:', error);
       }
-    }
 
+      if (data && data.length > 0) {
+        setPrompts(data as any as Prompt[]);
+      } else {
+        setPrompts(MOCK_PROMPTS);
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setPrompts(MOCK_PROMPTS);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchPrompts();
   }, []);
+
+  const handlePromptDeleted = (id: string) => {
+    // Optimistically remove from state
+    setPrompts((prev) => prev.filter((p) => p.id !== id));
+    // Optionally refetch to be sure
+    // fetchPrompts();
+  };
 
   return (
     <main className="container mx-auto px-4 py-8">
@@ -73,7 +79,11 @@ export default function Home() {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {prompts.map((prompt) => (
-            <PromptCard key={prompt.id} prompt={prompt} />
+            <PromptCard 
+              key={prompt.id} 
+              prompt={prompt} 
+              onDelete={() => handlePromptDeleted(prompt.id)} 
+            />
           ))}
         </div>
       )}
